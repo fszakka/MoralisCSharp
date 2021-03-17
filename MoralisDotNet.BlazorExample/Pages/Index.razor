@@ -1,0 +1,80 @@
+@page "/"
+@using MoralisDotNet.Core
+@using Parse
+@inject HttpClient _client;
+
+
+
+
+@if (Moralis != null)
+{
+    if (!HasConnected)
+    {
+        <MetamaskConnect Moralis="Moralis" OnAuthenticated="OnAuthenticatedCallback" OnSelectedAccountChanged="AccountChanged" />      }
+    else
+    {
+        <p>Username: @User.Username</p>
+        <p>CurrentAddress: @SelectedAddress</p>
+    }
+}
+else
+{
+    <form class="col-md-4">
+        <div class="form-group">
+            <label for="applicationId">Email address</label>
+            <input type="text" @bind="ApplicationId" class="form-control" id="applicationId" placeholder="Enter application ID">
+        </div>
+        <div class="form-group">
+            <label for="serverUri">Server URI</label>
+            <input type="text" @bind="ServerUri" class="form-control" id="serverUri" placeholder="Enter Server URI">
+        </div>
+        <div class="form-group">
+            <label for="contractAddress">Contract address</label>
+            <input type="text" @bind="ContractAddress" class="form-control" id="contractAddress" placeholder="Enter Contract address">
+        </div>
+        <button type="button" @onclick="EnableMoralis" class="btn btn-primary">Submit</button>
+    </form>
+}
+
+@code {
+    public Moralis Moralis { get; set; }
+    public ParseUser User { get; set; }
+    public bool HasConnected { get; set; }
+    public string SelectedAddress { get; set; }
+    public string ApplicationId { get; set; }
+    public string ServerUri { get; set; }
+    public string ContractAddress { get; set; }
+    protected async Task EnableMoralis()
+    {
+        if (string.IsNullOrWhiteSpace(ApplicationId))
+        {
+            Console.WriteLine("Please provide your application ID");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(ServerUri))
+        {
+            Console.WriteLine("Please provide your server uri");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(ContractAddress))
+        {
+            Console.WriteLine("Please provide your contract address");
+            return;
+        }
+        //var ApplicationId = "HEW4JNC6e1IhSbckdP1zJcceidrMCAl6gq3YtLjt";
+        //var ServerUri = "https://yrr5jv6wrrrm.moralis.io:2053/server/test";
+        //var ethAddress = "0xC97664F20Ae7be3cF9d9982f13341929882d9B0c";
+        Moralis = new Moralis(ApplicationId, ServerUri, "", ContractAddress, _client, true);
+    }
+
+    private void AccountChanged(string account)
+    {
+        SelectedAddress = account;
+    }
+
+    private void OnAuthenticatedCallback(ParseUser user)
+    {
+        HasConnected = true;
+        User = user;
+    }
+}

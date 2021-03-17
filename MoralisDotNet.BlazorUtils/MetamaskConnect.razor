@@ -1,0 +1,66 @@
+@using MoralisDotNet.Metamask
+@using Nethereum.Web3
+@using MoralisDotNet.Core
+@using Parse
+@inject MetamaskHostProvider _metamaskHostProvider;
+
+@if (MetamaskAvailable && string.IsNullOrEmpty(SelectedAccount))
+{
+    <button type="button" class="btn btnMetamask btn-light" @onclick="@AuthenticateMoralisAsync">Connect Metamask</button>
+}
+
+@if (!MetamaskAvailable)
+{
+    <button class="btnMetamask" disabled>Please Install Metamask</button>
+}
+
+@code {
+    bool MetamaskAvailable { get; set; }
+    string SelectedAccount { get; set; }
+    [Parameter]
+    public Moralis Moralis { get; set; }
+    Web3 MWeb3 { get; set; }
+    MoralisWeb3 MoralisWeb3 { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSelectedAccountChanged { get; set; }
+    [Parameter]
+    public EventCallback<ParseUser> OnAuthenticated { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        MoralisWeb3 = new MoralisWeb3(Moralis);
+        _metamaskHostProvider.SelectedAccountChanged += MetamaskHostProvider_SelectedAccountChanged;
+        MetamaskAvailable = await _metamaskHostProvider.CheckProviderAvailabilityAsync();
+
+        await base.OnInitializedAsync();
+    }
+
+    private async Task MetamaskHostProvider_SelectedAccountChanged(string account)
+    {
+       
+        SelectedAccount = account;
+        await OnSelectedAccountChanged.InvokeAsync(account);
+        this.StateHasChanged();
+    }
+
+    protected async Task EnableMoralisAsync()
+    {
+        SelectedAccount = await _metamaskHostProvider.EnableProviderAsync();
+        MWeb3 = await _metamaskHostProvider.GetWeb3Async();
+        var provider = _metamaskHostProvider.Name;
+        var ethereum = _metamaskHostProvider._metamaskInterop;
+        if (ethereum is null && string.IsNullOrWhiteSpace(provider))
+        {
+            throw new Exception("WARNING");
+        }
+        await ethereum.EnableEthereumAsync();
+    }
+
+    protected async Task AuthenticateMoralisAsync()
+    {
+        await EnableMoralisAsync();
+        var user = await MoralisWeb3.AuthenticateMoralisAsync(_metamaskHostProvider.SignMessageAsync, SelectedAccount, MWeb3.Eth.Accounts.SendRequestAsync);
+        await OnAuthenticated.InvokeAsync(user);
+    }
+}
